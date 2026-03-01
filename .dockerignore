@@ -1,0 +1,27 @@
+# Keep the Docker build context small by excluding files that are not
+# needed inside the image.
+
+# Version control
+.git
+.github
+
+# Documentation / media
+figures/
+*.md
+
+# Python byte-code and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDE / editor settings
+.vscode/
+.idea/
+.DS_Store
+
+# Temporary and test artefacts
+*.log
+*.tmp
