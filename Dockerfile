@@ -14,19 +14,15 @@
 
 FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
-# Disable interactive prompts during apt install
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install minimal system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
-    rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Install Python dependencies from the inference requirements file
+# Install Python dependencies from the inference requirements file.
+# torch is already pre-installed in the base image with CUDA support, so
+# we skip it to avoid replacing it with a potentially non-CUDA PyPI wheel.
 COPY inference/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN grep -v '^torch==' /app/requirements.txt > /tmp/requirements-no-torch.txt && \
+    pip install --no-cache-dir -r /tmp/requirements-no-torch.txt && \
+    rm /tmp/requirements-no-torch.txt
 
 # Copy inference source code and configs
 COPY inference/ /app/inference/
