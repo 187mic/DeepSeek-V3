@@ -37,9 +37,10 @@
 4. [Evaluation Results](#4-evaluation-results)
 5. [Chat Website & API Platform](#5-chat-website--api-platform)
 6. [How to Run Locally](#6-how-to-run-locally)
-7. [License](#7-license)
-8. [Citation](#8-citation)
-9. [Contact](#9-contact)
+7. [Docker / Container Deployment](#7-docker--container-deployment)
+8. [License](#8-license)
+9. [Citation](#9-citation)
+10. [Contact](#10-contact)
 
 
 ## 1. Introduction
@@ -341,10 +342,83 @@ In collaboration with the AMD team, we have achieved Day-One support for AMD GPU
 The [MindIE](https://www.hiascend.com/en/software/mindie) framework from the Huawei Ascend community has successfully adapted the BF16 version of DeepSeek-V3. For step-by-step guidance on Ascend NPUs, please follow the [instructions here](https://modelers.cn/models/MindIE/deepseekv3).
 
 
-## 7. License
+## 7. Docker / Container Deployment
+
+This repository ships a `Dockerfile` and `docker-compose.yml` so you can run the DeepSeek-Infer Demo entirely inside a container without modifying your host Python environment.
+
+### Prerequisites
+
+- An NVIDIA GPU with CUDA 12.1+ on the host
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed on the host
+- Model weights already converted (see [§6.1](#61-inference-with-deepseek-infer-demo-example-only))
+- [Docker](https://docs.docker.com/engine/install/) ≥ 24 and [Docker Compose](https://docs.docker.com/compose/install/) ≥ 2
+
+### Build the image
+
+```shell
+docker build -t deepseek-v3 .
+```
+
+### Run – interactive chat (single node)
+
+```shell
+docker run --gpus all -it --rm \
+  -v /path/to/DeepSeek-V3-Demo:/models \
+  deepseek-v3 \
+  --ckpt-path /models \
+  --config /app/inference/configs/config_671B.json \
+  --interactive --temperature 0.7 --max-new-tokens 200
+```
+
+### Run – batch inference from a file
+
+```shell
+docker run --gpus all --rm \
+  -v /path/to/DeepSeek-V3-Demo:/models \
+  -v /path/to/prompts.txt:/prompts.txt:ro \
+  deepseek-v3 \
+  --ckpt-path /models \
+  --config /app/inference/configs/config_671B.json \
+  --input-file /prompts.txt
+```
+
+### Run with Docker Compose (single node)
+
+```shell
+MODEL_PATH=/path/to/DeepSeek-V3-Demo docker compose run --rm deepseek-v3
+```
+
+Override any generation parameter by appending it after the service name:
+
+```shell
+MODEL_PATH=/path/to/DeepSeek-V3-Demo docker compose run --rm deepseek-v3 \
+  --ckpt-path /models \
+  --config /app/inference/configs/config_671B.json \
+  --interactive --temperature 0.5 --max-new-tokens 512
+```
+
+### Multi-node with `torchrun`
+
+For multi-node tensor-parallel inference, launch `torchrun` inside the container manually. On each node run:
+
+```shell
+docker run --gpus all --network host --rm \
+  -v /path/to/DeepSeek-V3-Demo:/models \
+  --entrypoint torchrun \
+  deepseek-v3 \
+  --nnodes 2 --nproc-per-node 8 \
+  --node-rank $RANK --master-addr $ADDR \
+  generate.py \
+  --ckpt-path /models \
+  --config /app/inference/configs/config_671B.json \
+  --interactive --temperature 0.7 --max-new-tokens 200
+```
+
+
+## 8. License
 This code repository is licensed under [the MIT License](LICENSE-CODE). The use of DeepSeek-V3 Base/Chat models is subject to [the Model License](LICENSE-MODEL). DeepSeek-V3 series (including Base and Chat) supports commercial use.
 
-## 8. Citation
+## 9. Citation
 ```
 @misc{deepseekai2024deepseekv3technicalreport,
       title={DeepSeek-V3 Technical Report}, 
@@ -357,5 +431,5 @@ This code repository is licensed under [the MIT License](LICENSE-CODE). The use 
 }
 ```
 
-## 9. Contact
+## 10. Contact
 If you have any questions, please raise an issue or contact us at [service@deepseek.com](service@deepseek.com).

@@ -1,0 +1,43 @@
+# docker-compose.yml — single-node DeepSeek-V3 deployment
+#
+# Prerequisites:
+#   - NVIDIA GPU(s) with CUDA 12.1+
+#   - NVIDIA Container Toolkit installed on the host
+#   - Model weights converted and placed in MODEL_PATH (see README §6.1)
+#
+# Usage:
+#   MODEL_PATH=/path/to/DeepSeek-V3-Demo docker compose run --rm deepseek-v3
+#
+# Override the default command to supply different flags, e.g.:
+#   MODEL_PATH=/path/to/weights docker compose run --rm deepseek-v3 \
+#     --ckpt-path /models --config /app/inference/configs/config_671B.json \
+#     --input-file /models/prompts.txt
+
+services:
+  deepseek-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deepseek-v3:latest
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      # Mount model weights directory; override MODEL_PATH env var as needed.
+      - "${MODEL_PATH:-./models}:/models:ro"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    # Default: interactive chat with the 671B config.
+    # Override on the command line to point at a different config or model path.
+    command: >
+      --ckpt-path /models
+      --config /app/inference/configs/config_671B.json
+      --interactive
+      --temperature 0.7
+      --max-new-tokens 200
